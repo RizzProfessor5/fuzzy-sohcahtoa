@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>⚙️ Video Transcoder</title>
+    <style>
+        /* =====================================================================
+       CSS RESET & VARIABLES
+    ===================================================================== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #0d1117;
+            --surface: #161b22;
+            --surface-2: #1f2937;
+            --border: #30363d;
+            --accent: #4f9cf9;
+            --accent-dim: #1d3a6e;
+            --success: #3fb950;
+            --warning: #d29922;
+            --error: #f85149;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --radius: 10px;
+            --font: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 4rem;
+            gap: 1.5rem;
+        }
+
+        /* =====================================================================
+       HEADER
+    ===================================================================== */
+        header {
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 0.3rem;
+        }
+
+        /* =====================================================================
+       CARD
+    ===================================================================== */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 760px;
+        }
+
+        .card h2 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        /* =====================================================================
+       FORM GRID
+    ===================================================================== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            padding: 0.55rem 0.75rem;
+            font-size: 0.9rem;
+            font-family: var(--font);
+            outline: none;
+            transition: border-color 0.2s;
+            width: 100%;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button {
+            display: none;
+        }
+
+        /* =====================================================================
+       DROP ZONE
+    ===================================================================== */
+        #dropZone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 2.5rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            position: relative;
+        }
+
+        #dropZone.dragover {
+            border-color: var(--accent);
+            background: rgba(79, 156, 249, 0.05);
+        }
+
+        #dropZone .drop-icon {
+            font-size: 2.5rem;
+            line-height: 1;
+        }
+
+        #dropZone .drop-text {
+            margin-top: 0.6rem;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        #dropZone .drop-text span {
+            color: var(--accent);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        #dropZone .drop-hint {
+            margin-top: 0.3rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        /* Hidden real file input — triggered by clicking drop zone */
+        #fileInput {
+            display: none;
+        }
+
+        /* =====================================================================
+       FILE LIST (selected files before upload)
+    ===================================================================== */
+        #fileList {
+            display: none;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-top: 1rem;
+        }
+
+        .file-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.45rem 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .file-chip .chip-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-chip .chip-size {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            white-space: nowrap;
+        }
+
+        .file-chip .chip-remove {
+            background: none;
+            border: none;
+            color: var(--error);
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0 0.2rem;
+            opacity: 0.7;
+            transition: opacity 0.15s;
+        }
+
+        .file-chip .chip-remove:hover {
+            opacity: 1;
+        }
+
+        /* =====================================================================
+       UPLOAD BUTTON
+    ===================================================================== */
+        #uploadBtn {
+            display: none;
+            /* shown when files are selected */
+            width: 100%;
+            max-width: 760px;
+            padding: 0.8rem;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font);
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        #uploadBtn:hover {
+            opacity: 0.88;
+        }
+
+        #uploadBtn:active {
+            transform: scale(0.98);
+        }
+
+        #uploadBtn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* =====================================================================
+       STATUS BANNER
+    ===================================================================== */
+        #statusBanner {
+            display: none;
+            width: 100%;
+            max-width: 760px;
+            padding: 0.75rem 1rem;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            border: 1px solid;
+        }
+
+        #statusBanner.info {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        #statusBanner.success {
+            background: rgba(63, 185, 80, 0.1);
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        #statusBanner.error {
+            background: rgba(248, 81, 73, 0.1);
+            border-color: var(--error);
+            color: var(--error);
+        }
+
+        /* =====================================================================
+       JOB QUEUE SECTION
+    ===================================================================== */
+        #queueSection {
+            display: none;
+            width: 100%;
+            max-width: 760px;
+        }
+
+        #queueSection h2 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        #jobContainer {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* =====================================================================
+       JOB CARD
+    ===================================================================== */
+        .job-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.2rem;
+            transition: border-color 0.3s;
+        }
+
+        .job-card.done {
+            border-color: var(--success);
+        }
+
+        .job-card.error {
+            border-color: var(--error);
+        }
+
+        .job-card.active {
+            border-color: var(--accent);
+        }
+
+        .job-header {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 0.7rem;
+        }
+
+        .job-icon {
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+
+        .job-name {
+            flex: 1;
+            font-size: 0.88rem;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .job-status {
+            font-size: 0.78rem;
+            font-weight: 600;
+            white-space: nowrap;
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+        }
+
+        .job-status.queued {
+            background: rgba(139, 148, 158, 0.15);
+            color: var(--text-muted);
+        }
+
+        .job-status.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        .job-status.done {
+            background: rgba(63, 185, 80, 0.15);
+            color: var(--success);
+        }
+
+        .job-status.error {
+            background: rgba(248, 81, 73, 0.15);
+            color: var(--error);
+        }
+
+        .job-status.expired {
+            background: rgba(210, 153, 34, 0.15);
+            color: var(--warning);
+        }
+
+        /* Progress bar */
+        .progress-track {
+            background: var(--surface-2);
+            border-radius: 4px;
+            height: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .job-card.done .progress-fill {
+            background: var(--success);
+            width: 100% !important;
+        }
+
+        .job-card.error .progress-fill {
+            background: var(--error);
+        }
+
+        .job-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .download-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--success);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.82rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .download-link.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .download-link:hover {
+            text-decoration: underline;
+        }
+
+        /* =====================================================================
+       RESPONSIVE
+    ===================================================================== */
+        @media (max-width: 540px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-group.full {
+                grid-column: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =====================================================================
+       HEADER
+  ====================================================================== -->
+    <header>
+        <h1>⚙️ Video Transcoder</h1>
+        <p>Queue up to unlimited files — 4 encode simultaneously via FFmpeg</p>
+    </header>
+
+    <!-- =====================================================================
+       SETTINGS CARD
+  ====================================================================== -->
+    <div class="card">
+        <h2>🔧 Settings</h2>
+        <div class="form-grid">
+
+            <!-- Secret Key -->
+            <div class="form-group full">
+                <label for="secretKey">🔑 Secret Key</label>
+                <input type="password" id="secretKey" placeholder="Enter server password"
+                    autocomplete="current-password" />
+            </div>
+
+            <!-- Video Codec -->
+            <div class="form-group">
+                <label for="codecSelect">🎬 Video Codec</label>
+                <select id="codecSelect">
+                    <option value="libsvtav1">libsvtav1 (AV1 — best compression)</option>
+                    <option value="libx265">libx265 (H.265 / HEVC)</option>
+                </select>
+            </div>
+
+            <!-- Preset (dynamic) -->
+            <div class="form-group">
+                <label for="presetSelect">⚡ Preset</label>
+                <select id="presetSelect"></select>
+            </div>
+
+            <!-- CRF -->
+            <div class="form-group">
+                <label for="crfInput">📊 CRF <span id="crfHint"
+                        style="color:var(--accent); font-size:0.75rem;"></span></label>
+                <input type="number" id="crfInput" min="0" max="63" step="1" />
+            </div>
+
+            <!-- Audio Codec -->
+            <div class="form-group">
+                <label for="audioCodecSelect">🔊 Audio Codec</label>
+                <select id="audioCodecSelect">
+                    <option value="aac">AAC (universal, great compatibility)</option>
+                    <option value="libopus">libopus (better quality/size, modern)</option>
+                </select>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- =====================================================================
+       DROP ZONE CARD
+  ====================================================================== -->
+    <div class="card">
+        <h2>📂 Files</h2>
+
+        <!-- Drag-and-drop area -->
+        <div id="dropZone">
+            <div class="drop-icon">🎞️</div>
+            <p class="drop-text">Drop videos here or <span id="browseBtn">browse</span></p>
+            <p class="drop-hint">Supports MP4, MKV, AVI, MOV, WebM, and more · Multiple files OK</p>
+            <input type="file" id="fileInput" accept="video/*" multiple />
+        </div>
+
+        <!-- Selected file list (populated by JS) -->
+        <div id="fileList"></div>
+    </div>
+
+    <!-- =====================================================================
+       UPLOAD BUTTON (shown only when files are staged)
+  ====================================================================== -->
+    <button id="uploadBtn">🚀 Upload &amp; Start Transcoding</button>
+
+    <!-- =====================================================================
+       STATUS BANNER
+  ====================================================================== -->
+    <div id="statusBanner" role="alert"></div>
+
+    <!-- =====================================================================
+       JOB QUEUE DISPLAY
+  ====================================================================== -->
+    <div id="queueSection">
+        <h2>📋 Queue</h2>
+        <div id="jobContainer"></div>
+    </div>
+
+
+    <!-- =====================================================================
+       SOCKET.IO CLIENT (served automatically by the server)
+  ====================================================================== -->
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+        'use strict';
+        // ===========================================================================
+        // STATE
+        // ===========================================================================
+        /** @type {File[]} — files staged for upload */
+        let stagedFiles = [];
+
+        /** @type {Map<string, object>} — jobId → { card, progressFill, statusEl, pctEl, dlLink } */
+        const jobs = new Map();
+
+        // ===========================================================================
+        // CODEC / PRESET CONFIGURATION
+        // ===========================================================================
+        const CODEC_CONFIG = {
+            libsvtav1: {
+                presets: [4, 6, 8, 10],
+                defaultCrf: 35,
+                crfRange: '0–63 (lower = better quality)',
+                hint: '(lower # = slower & better)'
+            },
+            libx265: {
+                presets: ['fast', 'medium', 'slow'],
+                defaultCrf: 23,
+                crfRange: '0–51 (lower = better quality)',
+                hint: '(slower preset = better compression)'
+            }
+        };
+
+        // DOM references for settings
+        const codecSelect = document.getElementById('codecSelect');
+        const presetSelect = document.getElementById('presetSelect');
+        const crfInput = document.getElementById('crfInput');
+        const crfHint = document.getElementById('crfHint');
+        const audioCodecSelect = document.getElementById('audioCodecSelect');
+
+        /** Rebuild the preset dropdown based on the selected codec */
+        function updatePresets() {
+            const cfg = CODEC_CONFIG[codecSelect.value];
+            presetSelect.innerHTML = '';
+            cfg.presets.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p;
+                opt.textContent = String(p);
+                presetSelect.appendChild(opt);
+            });
+            // Select the middle preset as a sensible default
+            presetSelect.selectedIndex = Math.floor(cfg.presets.length / 2);
+            crfInput.value = cfg.defaultCrf;
+            crfInput.max = codecSelect.value === 'libsvtav1' ? 63 : 51;
+            crfHint.textContent = cfg.crfRange;
+        }
+
+        codecSelect.addEventListener('change', updatePresets);
+        updatePresets(); // Run once on load
+
+        // ===========================================================================
+        // FILE INPUT / DRAG-AND-DROP
+        // ===========================================================================
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+        const fileList = document.getElementById('fileList');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        browseBtn.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', e => {
+            // Prevent double-trigger if click came from browseBtn
+            if (e.target !== browseBtn) fileInput.click();
+        });
+
+        fileInput.addEventListener('change', () => {
+            addFiles(Array.from(fileInput.files));
+            fileInput.value = ''; // Reset so the same file can be re-added if removed
+        });
+
+        // Drag events
+        dropZone.addEventListener('dragover', e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+        ['dragleave', 'dragend'].forEach(ev =>
+            dropZone.addEventListener(ev, () => dropZone.classList.remove('dragover'))
+        );
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            addFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('video/')));
+        });
+
+        /**
+         * Adds File objects to the staged list, deduplicating by name+size.
+         * @param {File[]} newFiles
+         */
+        function addFiles(newFiles) {
+            newFiles.forEach(f => {
+                const isDuplicate = stagedFiles.some(s => s.name === f.name && s.size === f.size);
+                if (!isDuplicate) stagedFiles.push(f);
+            });
+            renderFileList();
+        }
+
+        /** Renders the staged file chips */
+        function renderFileList() {
+            fileList.innerHTML = '';
+            if (stagedFiles.length === 0) {
+                fileList.style.display = 'none';
+                uploadBtn.style.display = 'none';
+                return;
+            }
+            fileList.style.display = 'flex';
+            uploadBtn.style.display = 'block';
+
+            stagedFiles.forEach((f, idx) => {
+                const chip = document.createElement('div');
+                chip.className = 'file-chip';
+                chip.innerHTML = `
+          <span class="chip-name" title="${escHtml(f.name)}">🎞️ ${escHtml(f.name)}</span>
+          <span class="chip-size">${formatBytes(f.size)}</span>
+          <button class="chip-remove" data-idx="${idx}" title="Remove">✕</button>
+        `;
+                fileList.appendChild(chip);
+            });
+
+            // Wire remove buttons
+            fileList.querySelectorAll('.chip-remove').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    stagedFiles.splice(Number(btn.dataset.idx), 1);
+                    renderFileList();
+                });
+            });
+        }
+
+        // ===========================================================================
+        // UPLOAD HANDLER
+        // ===========================================================================
+        uploadBtn.addEventListener('click', async () => {
+            if (stagedFiles.length === 0) return;
+
+            const secretKey = document.getElementById('secretKey').value.trim();
+            if (!secretKey) {
+                showBanner('Please enter the secret key before uploading.', 'error');
+                return;
+            }
+
+            // Disable button during upload
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = '⏳ Uploading…';
+            showBanner(`Uploading ${stagedFiles.length} file(s)…`, 'info');
+
+            const formData = new FormData();
+            formData.append('codec', codecSelect.value);
+            formData.append('preset', presetSelect.value);
+            formData.append('crf', crfInput.value);
+            formData.append('audioCodec', audioCodecSelect.value);
+            stagedFiles.forEach(f => formData.append('videos', f));
+
+            try {
+                const res = await fetch('/upload', {
+                    method: 'POST',
+                    headers: {
+                        'x-secret-key': secretKey
+                    },
+                    body: formData
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showBanner(`❌ Server error: ${data.error}`, 'error');
+                } else {
+                    showBanner(`✅ ${data.message}`, 'success');
+                    // Clear the staged list after a successful upload
+                    stagedFiles = [];
+                    renderFileList();
+                    // Show the queue section
+                    document.getElementById('queueSection').style.display = 'block';
+                }
+            } catch (err) {
+                showBanner(`❌ Network error: ${err.message}`, 'error');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = '🚀 Upload & Start Transcoding';
+            }
+        });
+
+        // ===========================================================================
+        // SOCKET.IO — Real-time Job Tracking
+        // ===========================================================================
+        const socket = io();
+
+        socket.on('connect', () => {
+            console.log('[Socket] Connected to server:', socket.id);
+        });
+        socket.on('disconnect', () => {
+            console.warn('[Socket] Disconnected from server');
+        });
+
+        /**
+         * job:queued — A file has been accepted and is waiting in the queue.
+         * Creates the job card in the UI immediately.
+         */
+        socket.on('job:queued', ({ jobId, originalName }) => {
+            document.getElementById('queueSection').style.display = 'block';
+            createJobCard(jobId, originalName);
+            updateJobStatus(jobId, 'queued', '🕐 Queued');
+        });
+
+        /**
+         * job:start — FFmpeg has begun encoding this file.
+         */
+        socket.on('job:start', ({ jobId, originalName }) => {
+            // Card may already exist from job:queued; create it if not (edge case)
+            if (!jobs.has(jobId)) createJobCard(jobId, originalName);
+            updateJobStatus(jobId, 'active', '⚙️ Encoding');
+        });
+
+        /**
+         * job:progress — Percentage update from FFmpeg's progress event.
+         */
+        socket.on('job:progress', ({ jobId, percent }) => {
+            const job = jobs.get(jobId);
+            if (!job) return;
+            job.progressFill.style.width = `${percent}%`;
+            job.pctEl.textContent = `${percent}%`;
+        });
+
+        /**
+         * job:done — Encode complete. Auto-trigger the browser download.
+         */
+        socket.on('job:done', ({ jobId, filename, originalName }) => {
+            const job = jobs.get(jobId);
+            if (!job) return;
+
+            // Update card appearance
+            job.card.classList.remove('active');
+            job.card.classList.add('done');
+            updateJobStatus(jobId, 'done', '✅ Done');
+            job.pctEl.textContent = '100%';
+
+            // Show the manual download link (backup if auto-download is blocked)
+            job.dlLink.href = `/download/${encodeURIComponent(filename)}`;
+            job.dlLink.download = filename;
+            job.dlLink.classList.add('visible');
+
+            // ─── AUTO-DOWNLOAD ────────────────────────────────────────────────────
+            // Dynamically create an invisible <a> tag and click it to force download.
+            const a = document.createElement('a');
+            a.href = `/download/${encodeURIComponent(filename)}`;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            // Remove the element shortly after to keep the DOM clean
+            setTimeout(() => document.body.removeChild(a), 1000);
+
+            console.log(`[Auto-Download] Triggered for: ${filename}`);
+        });
+
+        /**
+         * job:error — FFmpeg failed. Show error state on the card.
+         */
+        socket.on('job:error', ({ jobId, error }) => {
+            const job = jobs.get(jobId);
+            if (!job) return;
+            job.card.classList.remove('active');
+            job.card.classList.add('error');
+            updateJobStatus(jobId, 'error', '❌ Error');
+            job.pctEl.textContent = error || 'FFmpeg failed';
+            console.error(`[Job Error] ${jobId}:`, error);
+        });
+
+        /**
+         * job:expired — The server has deleted the encoded output file after TTL.
+         */
+        socket.on('job:expired', ({ jobId, filename }) => {
+            const job = jobs.get(jobId);
+            if (!job) return;
+            updateJobStatus(jobId, 'expired', '🗑️ Cleaned Up');
+            job.dlLink.classList.remove('visible'); // Download no longer available
+            console.log(`[Expired] Server cleaned up: ${filename}`);
+        });
+
+        // ===========================================================================
+        // JOB CARD HELPERS
+        // ===========================================================================
+
+        /**
+         * Creates and inserts a job card into the DOM, then stores refs in `jobs`.
+         * @param {string} jobId
+         * @param {string} originalName
+         */
+        function createJobCard(jobId, originalName) {
+            if (jobs.has(jobId)) return; // Already exists
+
+            const card = document.createElement('div');
+            card.className = 'job-card';
+            card.id = `job-${jobId}`;
+            card.innerHTML = `
+        <div class="job-header">
+          <span class="job-icon">🎞️</span>
+          <span class="job-name" title="${escHtml(originalName)}">${escHtml(originalName)}</span>
+          <span class="job-status queued" id="status-${jobId}">🕐 Queued</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="fill-${jobId}"></div>
+        </div>
+        <div class="job-footer">
+          <span id="pct-${jobId}" style="color:var(--text-muted)">0%</span>
+          <a class="download-link" id="dl-${jobId}" href="#" download>
+            ⬇ Download Again
+          </a>
+        </div>
+      `;
+
+            document.getElementById('jobContainer').prepend(card);
+
+            // Cache DOM references for fast updates in socket events
+            jobs.set(jobId, {
+                card,
+                progressFill: card.querySelector(`#fill-${jobId}`),
+                statusEl: card.querySelector(`#status-${jobId}`),
+                pctEl: card.querySelector(`#pct-${jobId}`),
+                dlLink: card.querySelector(`#dl-${jobId}`)
+            });
+        }
+
+        /**
+         * Updates the status badge on a job card.
+         * @param {string} jobId
+         * @param {string} state   — CSS class: queued | active | done | error | expired
+         * @param {string} label   — Display text
+         */
+        function updateJobStatus(jobId, state, label) {
+            const job = jobs.get(jobId);
+            if (!job) return;
+            job.statusEl.className = `job-status ${state}`;
+            job.statusEl.textContent = label;
+            job.card.className = `job-card ${state}`;
+        }
+
+        // ===========================================================================
+        // UTILITY FUNCTIONS
+        // ===========================================================================
+
+        /**
+         * Shows the status banner at the top of the queue section.
+         * @param {string} message
+         * @param {'info'|'success'|'error'} type
+         */
+        function showBanner(message, type = 'info') {
+            const banner = document.getElementById('statusBanner');
+            banner.textContent = message;
+            banner.className = type;
+            banner.style.display = 'block';
+            // Auto-hide success/info banners after 6 seconds
+            if (type !== 'error') {
+                setTimeout(() => { banner.style.display = 'none'; }, 6000);
+            }
+        }
+
+        /**
+         * Formats a byte count into a human-readable string.
+         * @param {number} bytes
+         * @returns {string}
+         */
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const units = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+        }
+
+        /**
+         * Escapes HTML special characters to prevent XSS via filenames.
+         * @param {string} str
+         * @returns {string}
+         */
+        function escHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+
+</html>
