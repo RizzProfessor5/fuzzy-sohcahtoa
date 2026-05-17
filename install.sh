@@ -46,7 +46,7 @@ if [[ "$keyfileyet" =~ ^[Yy]$ ]]; then
     cd /mnt/secure
 
 elif [[ "$keyfileyet" =~ ^[Nn]$ ]]; then
-    fallocate -l 16G /tmp/secure.img
+    fallocate -l 16G ~/secure.img
     LOOP=$(sudo losetup -f --show /tmp/secure.img)
     head -c 32 /dev/urandom > "$KEYFILE"
 
